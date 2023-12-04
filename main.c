@@ -5,15 +5,6 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 
-#include <stdlib.h>
-#include <stdio.h>
-
-#include <sys/time.h>
-#include <sys/types.h>
-
-#define MAX_CLIENTS 10
-
-// handle incoming data from clients. buf fills in chunks, whenever the chunk contains a newline, extract the message from the buffer and return it
 int extract_message(char **buf, char **msg)
 {
 	char	*newbuf;
@@ -41,7 +32,6 @@ int extract_message(char **buf, char **msg)
 	return (0);
 }
 
-// join two strings together, when would this be used?
 char *str_join(char *buf, char *add)
 {
 	char	*newbuf;
@@ -62,96 +52,43 @@ char *str_join(char *buf, char *add)
 	return (newbuf);
 }
 
-void put_str(char *str)
-{
-	int	i;
 
-	i = 0;
-	while (str[i])
-		i++;
-	write(1, str, i);
-}
-
-// creates a socket and binds to it
-// - printf replaced with put_str
-// - htonl and htons replaced by hardcoded hex values (to memorise)
 int main() {
-	int fds[MAX_CLIENTS];
-	int num_clients = 0;
-
-	int sockfd, connfd, len;
+	int sock_fd, conn_fd, len;
 	struct sockaddr_in servaddr, cli; 
 
 	// socket create and verification 
-	sockfd = socket(AF_INET, SOCK_STREAM, 0); 
-	if (sockfd == -1) { 
-		put_str("socket creation failed...\n"); 
+	sock_fd = socket(AF_INET, SOCK_STREAM, 0); 
+	if (sock_fd == -1) { 
+		printf("socket creation failed...\n"); 
 		exit(0); 
 	} 
 	else
-		put_str("Socket successfully created..\n"); 
+		printf("Socket successfully created..\n"); 
 	bzero(&servaddr, sizeof(servaddr)); 
 
 	// assign IP, PORT 
 	servaddr.sin_family = AF_INET; 
-	servaddr.sin_addr.s_addr = 0x0100007F; //127.0.0.1
-	servaddr.sin_port = 0x911F; // 8081 
+	servaddr.sin_addr.s_addr = htonl(2130706433); //127.0.0.1
+	servaddr.sin_port = htons(8081); 
   
 	// Binding newly created socket to given IP and verification 
-	if ((bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr))) != 0) { 
-		put_str("socket bind failed...\n"); 
+	if ((bind(sock_fd, (const struct sockaddr *)&servaddr, sizeof(servaddr))) != 0) { 
+		printf("socket bind failed...\n"); 
 		exit(0); 
 	} 
 	else
-		put_str("Socket successfully binded..\n");
-	if (listen(sockfd, MAX_CLIENTS) != 0) {
-		put_str("cannot listen\n"); 
+		printf("Socket successfully binded..\n");
+	if (listen(sock_fd, 10) != 0) {
+		printf("cannot listen\n"); 
 		exit(0); 
 	}
 	len = sizeof(cli);
-	connfd = accept(sockfd, (struct sockaddr *)&cli, &len);
-	if (connfd < 0) { 
-        put_str("server acccept failed...\n"); 
+	conn_fd = accept(sock_fd, (struct sockaddr *)&cli, &len);
+	if (conn_fd < 0) { 
+        printf("server acccept failed...\n"); 
         exit(0); 
     } 
     else
-	{
-		// accept client connections, read data from them, extract messages from this data and send to other clients
-        put_str("server acccept the client...\n");
-		fds[num_clients++] = connfd;
-		fd_set rfds;
-		struct timeval tv;
-		FD_ZERO(&rfds);
-		FD_SET(connfd, &rfds);
-		// set timeout to 0 to return immediately (non-blocking)
-		tv.tv_sec = 0;
-		tv.tv_usec = 0;
-		int retval = select(connfd + 1, &rfds, NULL, NULL, &tv);
-		// retval is the total number of ready file descriptors in all the sets
-		if (retval == -1)
-			perror("select()");
-		else if (retval == 0)
-			put_str("None of the file descriptors are ready.\n");
-		else if (FD_ISSET(connfd, &rfds))
-		{
-			put_str("Data is available now.\n");
-			// read data and send to other clients
-			char buf[1024];
-			char *msg = NULL;
-			int len = recv(connfd, buf, sizeof(buf) - 1, 0);
-			if (len > 0) {
-				buf[len] = '\0';
-				extract_message(&buf, &msg);
-				int i = 0;
-				while(i < num_clients)
-				{
-					if (fds[i] != connfd)
-						send(fds[i], msg, strlen(msg), 0);
-					i++;
-				}
-			}
-		}
-		else
-			put_str("No data within five seconds.\n");
-	}
+        printf("server acccept the client...\n");
 }

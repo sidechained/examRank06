@@ -104,7 +104,7 @@ the total number of ready file descriptors in all the sets. If the timeout expir
 When a client sends a message to the server, the server reads the data from the client's file descriptor
 
 recv() arguments:
-int sockfd: This is the socket file descriptor that the function will read from. This is typically the file descriptor returned by accept() for a specific client connection.
+int sock_fd: This is the socket file descriptor that the function will read from. This is typically the file descriptor returned by accept() for a specific client connection.
 void *buf: This is a pointer to a buffer where the received data will be stored.
 size_t len: This is the maximum length of the buffer, i.e., the maximum amount of data to receive.
 int flags: This is an optional parameter that can be used to influence the behavior of the function. For a basic usage, this can be set to 0.
@@ -117,7 +117,7 @@ The server writes responses back to the client using the same file descriptor.
 ### send()
 
 arguments:
-- int sockfd: This is the socket file descriptor that the function will write to. This is typically the file descriptor returned by accept() for a specific client connection.
+- int sock_fd: This is the socket file descriptor that the function will write to. This is typically the file descriptor returned by accept() for a specific client connection.
 - const void *buf: This is a pointer to the buffer containing the data to be sent.
 - size_t len: This is the length of the data in the buffer, i.e., the amount of data to send.
 - int flags: This is an optional parameter that can be used to influence the behavior of the function. For a basic usage, this can be set to 0.

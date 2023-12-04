@@ -69,12 +69,12 @@ int main(int argc, char **argv)
         }
 
         // Check each socket for activity
-        for (int connFd = 0; connFd <= maxFd; connFd++) 
+        for (int conn_fd = 0; conn_fd <= maxFd; conn_fd++) 
         {
-            if (FD_ISSET(connFd, &readyFds)) 
+            if (FD_ISSET(conn_fd, &readyFds)) 
             {
                 // New client connection
-                if (connFd == serverFd)
+                if (conn_fd == serverFd)
                 // activity is on the server file descriptor, i.e. a new client connecting
                 {
                     int clientFd = accept(serverFd, NULL, NULL);
@@ -92,33 +92,33 @@ int main(int argc, char **argv)
                 else
                 // activity is on a client file descriptor, i.e. a client sending a message
                 {
-                    int bytesRead = recv(connFd, buffer, sizeof(buffer) - 1, 0);
+                    int bytesRead = recv(conn_fd, buffer, sizeof(buffer) - 1, 0);
                     if (bytesRead <= 0)
                     // Client disconnected
                     {                        
-                        sprintf(buffer, "server: client %d just left\n", connFd);
+                        sprintf(buffer, "server: client %d just left\n", conn_fd);
                         // Notify remaining clients about the disconnected client
                         for (int i = 0; i < nextFd; i++) 
                         {
-                            if (clientFds[i] != connFd) 
+                            if (clientFds[i] != conn_fd) 
                             {
                                 send(clientFds[i], buffer, strlen(buffer), 0); // Send the disconnection message to other clients
                             }
                         }
                         // Close the socket and remove it from the active set
-                        close(connFd);                          // Close the client socket
-                        FD_CLR(connFd, &activeFds);         // Remove the client socket from the set of active sockets
+                        close(conn_fd);                          // Close the client socket
+                        FD_CLR(conn_fd, &activeFds);         // Remove the client socket from the set of active sockets
                     } 
                     else
                     // Client sent a message
                     {
                         // Broadcast the received message to all other clients
                         buffer[bytesRead] = '\0';                  // Null-terminate the received message
-                        sprintf(buffer, "client %d: %s\n", connFd, buffer);  // Add client identifier to the message
+                        sprintf(buffer, "client %d: %s\n", conn_fd, buffer);  // Add client identifier to the message
 
                         for (int i = 0; i < nextFd; i++) 
                         {
-                            if (clientFds[i] != connFd) 
+                            if (clientFds[i] != conn_fd) 
                             {
                                 send(clientFds[i], buffer, strlen(buffer), 0);  // Send the message to other clients
                             }
