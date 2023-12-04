@@ -1,0 +1,135 @@
+# Simplified subject text
+
+Allowed functions:
+
+socket
+bind
+
+accept
+select
+listen
+send
+recv
+
+write - write to screen
+close
+
+string manipulation:
+strstr
+sprintf - 
+strlen
+strcpy
+strcat
+atoi
+
+memory:
+malloc
+realloc
+free
+calloc
+bzero
+memset
+
+exit
+
+Write a program that will listen for client to connect on a certain port on 127.0.0.1 and will let clients to speak with each other
+
+This program will take as first argument the port to bind to
+If no argument is given, it should write in stderr "Wrong number of arguments" followed by a \n and exit with status 1
+If a System Calls returns an error before the program start accepting connection, it should write in stderr "Fatal error" followed by a \n and exit with status 1
+If you cant allocate memory it should write in stderr "Fatal error" followed by a \n and exit with status 1
+
+Your program must be non-blocking but client can be lazy and if they don't read your message you must NOT disconnect them...
+
+?!? The fd that you will receive will already be set to make 'recv' or 'send' to block if select hasn't be called before calling them, but will not block otherwise. 
+
+When a client connects to the server:
+- the client will be given an id. the first client will receive the id 0 and each new client will received the last client id + 1
+- a message is sent to all the client that was connected to the server: "server: client %d just arrived\n"
+
+clients must be able to send messages to your program.
+- message will only be printable characters, no need to check
+- a single message can contains multiple \n
+- when the server receive a message, it must resend it to all the other client with "client %d: " before every line!
+
+When a client disconnect from the server:
+- a message is sent to all the client that was connected to the server: "server: client %d just left\n"
+
+Memory or fd leaks are forbidden
+
+To help you, you will find the file main.c with the beginning of a server and maybe some useful functions. (Beware this file use forbidden functions or write things that must not be there in your final program)
+
+Warning our tester is expecting that you send the messages as fast as you can. Don't do un-necessary buffer.
+
+# Concepts and functions
+
+## Server
+- is what i need to build!
+
+## Clients
+- Will be simulated using nc (netcat)
+- multiple clients can be run in different terminal windows
+example:
+nc 127.0.0.1 8081
+
+## File Descriptors
+represent open connections
+each client that connects to the server is assigned a unique file descriptor
+select is used to monitor the file descriptors for incoming data
+
+## Sockets
+socket() is used to create a socket on which to listen for incoming client connections
+bind() is used to bind the socket to a specific IP and port
+
+## Connecting
+when a client connects, on the server side we
+- accept() function is called
+- it returns a new file descriptor for that client
+- the fd is added to set that select monitors
+
+## Select()
+select is used to monitor multiple file descriptors
+
+arguments:
+- int nfds: The highest-numbered file descriptor in any of the three sets, plus 1.
+- fd_set *readfds: An optional pointer to a set of file descriptors to be checked for being ready to read.
+- fd_set *writefds: An optional pointer to a set of file descriptors to be checked for being ready to write.
+- fd_set *exceptfds: An optional pointer to a set of file descriptors to be checked for error conditions.
+- struct timeval *timeout: An optional timeout. select() returns if this time limit expires.
+
+returns:
+the total number of ready file descriptors in all the sets. If the timeout expires, it returns 0. In case of an error, it returns -1.
+
+## Receiving Data
+When a client sends a message to the server, the server reads the data from the client's file descriptor
+
+recv() arguments:
+int sockfd: This is the socket file descriptor that the function will read from. This is typically the file descriptor returned by accept() for a specific client connection.
+void *buf: This is a pointer to a buffer where the received data will be stored.
+size_t len: This is the maximum length of the buffer, i.e., the maximum amount of data to receive.
+int flags: This is an optional parameter that can be used to influence the behavior of the function. For a basic usage, this can be set to 0.
+returns:
+the number of bytes received, or -1 if an error occurred. The received data is stored in the buffer passed to the function.
+
+## Sending Data
+The server writes responses back to the client using the same file descriptor.
+
+### send()
+
+arguments:
+- int sockfd: This is the socket file descriptor that the function will write to. This is typically the file descriptor returned by accept() for a specific client connection.
+- const void *buf: This is a pointer to the buffer containing the data to be sent.
+- size_t len: This is the length of the data in the buffer, i.e., the amount of data to send.
+- int flags: This is an optional parameter that can be used to influence the behavior of the function. For a basic usage, this can be set to 0.
+
+returns:
+the number of bytes sent, or -1 if an error occurred.
+
+## Disconnecting
+when a client disconnects (i.e. nc is closed)
+- remove clients file descriptor from the set that select is monitoring
+- close the file descriptor
+
+# fd_set
+
+htol and htons are allowed! 

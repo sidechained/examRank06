@@ -1,0 +1,59 @@
+# overall structure
+
+Q: difference between activeSockets and readySockets is that
+- activeSockets is a set of all sockets that are currently connected to the server, while
+- readySockets is a set of all sockets that have activity on them (i.e. they are ready to be read from or written to).
+
+define MAX_CLIENTS and BUFFER_SIZE
+
+int main()
+{
+    if args != 2
+        put_str("Fatal error\n") and exit 1 if fails
+    init clientSockets[MAX_CLIENTS]
+    init fd_sets activeSockets, readySockets
+    init 
+    buffer[BUFFER_SIZE]
+    socket() - create a socket on which to listen for incoming client connections        
+        put_str("Fatal error\n") and exit 1 if fails
+    init server address struct
+    bind() - bind the socket to a specific IP and port
+        put_str("Fatal error\n") and exit 1 if fails
+    listen() - marks a socket as a passive socket that will be used to accept incoming connection requests via accept()
+        put_str("Fatal error\n") and exit 1 if fails
+    init the active sockets set (FD_ZERO, FD_SET)
+    init maxSocket
+    while (1)
+    {
+        // wait for activity on sockets
+        select()
+            put_str("???\n") and exit 1 if fails
+        // check each socket for activity
+        loop over socketIds up to maxSocket
+        {
+            if socket is ready (socketId is set in readySockets)
+            {
+                if socketId == serverSocket
+                {
+                    accept()
+                        put_str("???\n") and exit 1 if fails
+                    add new socket to activeSockets
+                    if new socket is greater than maxSocket
+                        update maxSocket
+                }
+                else is client socket
+                {
+                    recv()
+                        put_str("???\n") and exit 1 if fails
+                    if nothing more is read (recv returns 0)
+                        close()
+                        remove socket from activeSockets
+                    else
+                        send()
+                            put_str("???\n") and exit 1 if fails
+                }
+            }
+        }
+    }
+    close()
+}
