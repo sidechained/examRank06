@@ -1,8 +1,11 @@
 // cc mini_serv.c -o mini_serv && ./mini_serv
-// nc 127.0.0.1 9876
-// PROBLEM: nc just returns to prompt
+// nc 127.0.0.1 8081
+// PROBLEM: disconnected clients don't get removed from clients array
+// does it leak?
 
 // Q: do i need to validate if port is positive?
+// break: breaks out of the loops
+// continue: skips the rest of the loop and goes to the next iteration
 
 #include <errno.h>
 #include <string.h>
@@ -15,53 +18,6 @@
 
 #define MAX_CLIENTS 10
 #define BUFFER_SIZE 1024
-
-// int extract_message(char **buf, char **msg)
-// {
-// 	char	*newbuf;
-// 	int	i;
-
-// 	*msg = 0;
-// 	if (*buf == 0)
-// 		return (0);
-// 	i = 0;
-// 	while ((*buf)[i])
-// 	{
-// 		if ((*buf)[i] == '\n')
-// 		{
-// 			newbuf = calloc(1, sizeof(*newbuf) * (strlen(*buf + i + 1) + 1));
-// 			if (newbuf == 0)
-// 				return (-1);
-// 			strcpy(newbuf, *buf + i + 1);
-// 			*msg = *buf;
-// 			(*msg)[i + 1] = 0;
-// 			*buf = newbuf;
-// 			return (1);
-// 		}
-// 		i++;
-// 	}
-// 	return (0);
-// }
-
-// char *str_join(char *buf, char *add)
-// {
-// 	char	*newbuf;
-// 	int		len;
-
-// 	if (buf == 0)
-// 		len = 0;
-// 	else
-// 		len = strlen(buf);
-// 	newbuf = malloc(sizeof(*newbuf) * (len + strlen(add) + 1));
-// 	if (newbuf == 0)
-// 		return (0);
-// 	newbuf[0] = 0;
-// 	if (buf != 0)
-// 		strcat(newbuf, buf);
-// 	free(buf);
-// 	strcat(newbuf, add);
-// 	return (newbuf);
-// }
 
 void print(char *str_to_print)
 {
@@ -76,10 +32,10 @@ void print_exit(char *str_to_print)
 }
 
 int main(int argc, char **argv) {
-	int server_fd, conn_fd, port;
+	int server_fd, conn_fd;
 	struct sockaddr_in servaddr, cli;
 	if (argc != 2)
-		print_exit("wrong num of args\n");
+		print_exit("Wrong number of arguments\n");
 	server_fd = socket(AF_INET, SOCK_STREAM, 0); 
 	if (server_fd == -1)
 		print_exit("socket creation failed...\n"); 
@@ -95,14 +51,14 @@ int main(int argc, char **argv) {
 		print_exit("cannot listen\n");
 	print("listen success..\n");
 
-	int max_fd = server_fd; // Variable to track the maximum socket descriptor
-	int client_fds[MAX_CLIENTS];
-	int next_fd = 0;
 	fd_set active_fds, ready_fds; // Sets of active and ready file descriptors
-	char buffer[BUFFER_SIZE];
-
 	FD_ZERO(&active_fds); // Clear the set
 	FD_SET(server_fd, &active_fds); // Add the server socket to the set	
+
+	int client_fds[MAX_CLIENTS];
+	int next_fd = 0;
+	char buffer[BUFFER_SIZE];
+	int max_fd = server_fd; // Variable to track the maximum socket descriptor
 	while(1)
 	{
 		ready_fds = active_fds;
@@ -110,22 +66,23 @@ int main(int argc, char **argv) {
 			print_exit("Error in select\n");
 		for (int conn_fd = 0; conn_fd <= max_fd; conn_fd++) {
 			if (!FD_ISSET(conn_fd, &ready_fds))
-				break; 
+				continue;
 			if (conn_fd == server_fd) {
+				printf("new client connecting\n");
 				// NEW CLIENT CONNECTING:
 				socklen_t len;
 				len = sizeof(cli);
 				int client_fd = accept(server_fd, (struct sockaddr *)&cli, &len);
 				if (client_fd < 0)
 					print_exit("server acccept failed...\n");
-				print("server acccept the client...\n");
+				print("server acccepted the client...\n");
 				FD_SET(client_fd, &active_fds); // Add the client fd to the set of active fds
 				if (client_fd > max_fd)
 					max_fd = client_fd;
 				sprintf(buffer, "server: client %d just arrived\n", next_fd);
 				send(client_fd, buffer, strlen(buffer), 0);
 				client_fds[next_fd++] = client_fd;  // Add the client socket to the array, storing for future reference				
-				break;
+				continue;
 			}
 			// DATA IS READY:
 			int bytesRead = recv(conn_fd, buffer, sizeof(buffer) - 1, 0);
@@ -140,16 +97,19 @@ int main(int argc, char **argv) {
 				}
 				close(conn_fd); // close client fd
 				FD_CLR(conn_fd, &active_fds); // Remove the client fd from the set of active fd
-				break;
+				continue;
 			} 			
 			// CLIENT SENT A MESSAGE
 			// Broadcast the received message to all other clients
-			buffer[bytesRead] = '\0'; // Null-terminate the received message
-			sprintf(buffer, "client %d: %s\n", conn_fd, buffer); // Add client identifier to the message
+			buffer[bytesRead] = '\0';
+			char newBuffer[BUFFER_SIZE];
+			strcpy(newBuffer, buffer);
+			sprintf(newBuffer, "client %d: %s", conn_fd, buffer); // \n or not?
+			printf("%s", newBuffer);
 			for (int i = 0; i < next_fd; i++) 
 			{
 				if (client_fds[i] != conn_fd) 
-					send(client_fds[i], buffer, strlen(buffer), 0); // Send the message to other clients
+					send(client_fds[i], newBuffer, strlen(newBuffer), 0);
 			}
 		}
 	}
